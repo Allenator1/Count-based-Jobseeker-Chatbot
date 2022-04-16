@@ -129,7 +129,7 @@ def create_query(msg, update):
                                         column_data['company_name'], column_data['job_type'])
     if len(closest_jobs) > 0: 
         update_best_matches(closest_jobs)
-    print('Identified job categories:', column_data['category'])
+    print('Identified job category:', column_data['category'])
     
     # Present results of the search
     if len(closest_jobs) == 0:

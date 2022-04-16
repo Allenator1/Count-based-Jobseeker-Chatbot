@@ -41,49 +41,47 @@ JOB_CATEGORY_GROUPS = {'science & technology': ['Information & Communication Tec
 
 
 # To do: allow for multiple categories to be evaluated, choosing the best score between multiple tfidf matrices
-def find_closest_jobs(user_input, job_categories,  city=None, company_name=None, job_type=None, score_thresh=0.05):
-    all_cat_scores = []
+def find_closest_jobs(user_input, cat_grp,  city=None, company_name=None, job_type=None, score_thresh=0.05):
+    df_categories = JOB_CATEGORY_GROUPS[cat_grp]
+    pruned_df = jobs_dataframe[jobs_dataframe.category.isin(df_categories)]
     
-    for category in job_categories:
-        pruned_df = jobs_dataframe[jobs_dataframe.category.eq(category)]
-        if city:
-            pruned_df = pruned_df[pruned_df.city.eq(city)]
-        if company_name:
-            pruned_df = pruned_df[pruned_df.company_name.eq(company_name)]
-        if job_type:
-            pruned_df = pruned_df[pruned_df.job_type.eq(job_type)]
+    if city:
+        pruned_df = pruned_df[pruned_df.city.eq(city)]
+    if company_name:
+        pruned_df = pruned_df[pruned_df.company_name.eq(company_name)]
+    if job_type:
+        pruned_df = pruned_df[pruned_df.job_type.eq(job_type)]
+    
+    category_data = preprocessed_data[cat_grp]
+    tfidf = category_data['tfidf']
+    tfidf_matrix = category_data['tfidf_matrix']
+    dictionary = category_data['dictionary']
+    df_indices = category_data['df_indices']    # A list of data frame row indices corresponding to the docs in the corpus
+    bigrams = category_data['bigrams']
+    
+    # Filter docs which are invalidated by city, and job_type
+    valid_indices = [(i, df_ind) for i, df_ind in enumerate(df_indices) if df_ind in set(pruned_df.index.values)]
+    corp_indices, df_indices = zip(*valid_indices)
+    tfidf_matrix = [tfidf_matrix[i] for i in corp_indices]
+    
+    # Construct sparse embeddings
+    embeddings = []
+    for doc in tfidf_matrix:
+        scores_dict = dict(doc)
+        embeddings.append([scores_dict.get(id, 0) for id in range(len(dictionary))])
         
-        category_data = preprocessed_data[category]
-        tfidf = category_data['tfidf']
-        tfidf_matrix = category_data['tfidf_matrix']
-        dictionary = category_data['dictionary']
-        df_indices = category_data['df_indices']    # A list of data frame row indices corresponding to the docs in the corpus
-        bigrams = category_data['bigrams']
-        
-        # Filter docs which are invalidated by city, and job_type
-        valid_indices = [(i, df_ind) for i, df_ind in enumerate(df_indices) if df_ind in set(pruned_df.index.values)]
-        corp_indices, df_indices = zip(*valid_indices)
-        tfidf_matrix = [tfidf_matrix[i] for i in corp_indices]
-        
-        # Construct sparse embeddings
-        embeddings = []
-        for doc in tfidf_matrix:
-            scores_dict = dict(doc)
-            embeddings.append([scores_dict.get(id, 0) for id in range(len(dictionary))])
-            
-        input_tokens = process_doc(user_input, bigrams)
-        input_BoW = dictionary.doc2bow(input_tokens)
-        input_score_dict = dict(tfidf[input_BoW])
-        input_embedding = [[input_score_dict.get(id, 0) for id in range(len(dictionary))]]
-        
-        cosine_scores = cosine_similarity(input_embedding, embeddings).flatten()
-        job_listing_scores = filter(lambda x: x[1] > score_thresh, zip(df_indices, cosine_scores))
-        all_cat_scores.extend(job_listing_scores)
+    input_tokens = process_doc(user_input, bigrams)
+    input_BoW = dictionary.doc2bow(input_tokens)
+    input_score_dict = dict(tfidf[input_BoW])
+    input_embedding = [[input_score_dict.get(id, 0) for id in range(len(dictionary))]]
+    cosine_scores = cosine_similarity(input_embedding, embeddings).flatten()
+    job_listing_scores = filter(lambda x: x[1] > score_thresh, zip(df_indices, cosine_scores))
+    job_listing_scores = sorted(job_listing_scores, key=lambda x: x[1], reverse=True)
+    job_listing_scores = list(job_listing_scores)
         
     get_desc = lambda i: jobs_dataframe['job_description'].loc[i]
-    all_cat_scores = sorted(all_cat_scores, key=lambda x: x[1], reverse=True)
-    top_score = all_cat_scores[0][1] if all_cat_scores else 0
-    summaries = [(df_ind, summarize_description(get_desc(df_ind), bigrams, dictionary, tfidf)) for df_ind, _ in all_cat_scores]
+    top_score = job_listing_scores[0][1] if job_listing_scores else 0
+    summaries = [(df_ind, summarize_description(get_desc(df_ind), bigrams, dictionary, tfidf)) for df_ind, _ in job_listing_scores]
     return summaries, top_score
 
 
@@ -93,12 +91,12 @@ def find_closest_columns(nlp, jobs, locations=[], companies=[], job_type=''):
     
     out_data = {'categories': [], 'location': None, 'location_score': -1, 'company_name': None, 
                 'company_score': -1, 'job_type': None}
-    category_docs = [nlp(cat.lower()) for cat in set(jobs_dataframe['category'])]
+    category_docs = [nlp(cat.lower()) for cat in JOB_CATEGORY_GROUPS.keys()]
     job_docs = [nlp(job) for job in jobs]
     category_scores = {cat: max([cat.similarity(job) for job in job_docs]) for cat in category_docs}
     best_cats = sorted(category_scores, key=category_scores.get, reverse=True)
-    best_cats = [cat.text.title() for cat in best_cats[:3]]
-    out_data['category'] = best_cats
+    best_cat = best_cats[0].text
+    out_data['category'] = best_cat
          
     if locations != []:
         locations = [loc.title() for loc in locations]
@@ -125,17 +123,16 @@ def find_closest_columns(nlp, jobs, locations=[], companies=[], job_type=''):
     return out_data
         
     
-def preprocess(csv_name):
+def preprocess(csv_name, file_name):
     df = pd.read_csv(csv_name).drop_duplicates(subset='job_description')
     df = df[df['job_description'].notnull()]
     preprocessed_data = {}
-    categories = set(df['category'])
     print('Preprocessing:\n')
-    for i, category in enumerate(categories):
-        job_listings = job_listings[job_listings['category'] == category]
+    for i, (group_name, categories) in enumerate(JOB_CATEGORY_GROUPS.items()):
+        job_listings = df[df.category.isin(categories)]
         print(f'=========> {i / len(categories) * 100:.2f} / 100 %', end='\r')
-        preprocessed_data[category] = preprocess_descriptions(df, category)
-    pickle.dump(preprocessed_data, open('preprocessed_category_data.pkl', 'wb'))  
+        preprocessed_data[group_name] = preprocess_descriptions(job_listings)
+    pickle.dump(preprocessed_data, open(file_name, 'wb'))  
 
 
 def preprocess_descriptions(job_listings, verbose=False):
@@ -287,10 +284,10 @@ def test():
         best_description = jobs_dataframe['job_description'].loc[d]
         print(summarize_description(best_description, bigrams, dictionary, tfidf))
 
-
-if os.path.exists('preprocessed_category_data.pkl'):
+pickle_file_name = 'preprocessed_category_groups.pkl'
+if os.path.exists(pickle_file_name):
     jobs_dataframe = pd.read_csv('seek_australia.csv').drop_duplicates(subset='job_description')
     jobs_dataframe = jobs_dataframe[jobs_dataframe['job_description'].notnull()]
-    preprocessed_data = pickle.load(open('preprocessed_category_data.pkl', 'rb'))
+    preprocessed_data = pickle.load(open(pickle_file_name, 'rb'))
 else:
-    preprocess(csv_name='seek_australia.csv', file_name='preprocessed_category_data.pkl')
+    preprocess(csv_name='seek_australia.csv', file_name=pickle_file_name)
