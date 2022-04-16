@@ -25,19 +25,22 @@ stopwords = set(stopwords.words('english'))
 punctuation = set(punctuation)
 whitespace = set(whitespace)
 
-JOB_CATEGORY_GROUPS = {'science & technology': ['Information & Communication Technology', 'Science & Technology'],
-                        'engineering': ['Engineering', 'Construction', 'Mining, Resources & Energy'],
-                        'trade': ['Trade & Services', 'Construction', 'Mining, Resources & Energy'],
-                        'office': ['Administration & Office Support', 'Accounting', 'Sales', 'Marketing & Communications', 
-                                'Consulting and Strategy', 'Human Resources & Recruitment', 'CEO & General Management'],
+JOB_CATEGORY_GROUPS = {'technology & engineering': ['Information & Communication Technology', 'Engineering'],
+                       'science': ['Science & Technology', 'Education & Training', 'Consulting and Strategy'],
+                       'consulting': ['Consulting and Strategy'],
+                       'mining and construction': ['Construction', 'Mining, Resources & Energy'],
+                        'trade': ['Trade & Services'],
+                        'office': ['Administration & Office Support', 'Marketing & Communications', 'Sales'
+                                   'Human Resources & Recruitment', 'CEO & General Management', 'Consulting and Strategy'],
                         'health': ['Healthcare & Medical'],
-                        'finance': ['Banking & Financial Services', 'Accounting', 'Insurance & Superannuation'],
-                        'creative': ['Advertising, Arts & Media', 'Design & Architecture'],
+                        'finance': ['Banking & Financial Services', 'Accounting', 'Insurance & Superannuation', 
+                                    'Consulting and Strategy'],
+                        'design': ['Advertising, Arts & Media', 'Design & Architecture', 'Consulting and Strategy'],
                         'community': ['Community Services & Development', 'Education & Training', 'Sport & Recreation'],
-                        'retail': ['Retail & Consumer Products', 'Sales', 'Hospitality & Tourism', 'Call Centre & Customer Service'],
-                        'legal': ['Legal'],
+                        'retail': ['Retail & Consumer Products', 'Hospitality & Tourism', 'Call Centre & Customer Service'],
+                        'legal': ['Legal', 'Consulting and Strategy'],
                         'civil': ['Government & Defense'],
-                        'animals': ['Farming, Animals & Conservation']}
+                        'animal': ['Farming, Animals & Conservation']}
 
 
 # To do: allow for multiple categories to be evaluated, choosing the best score between multiple tfidf matrices
