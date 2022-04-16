@@ -25,20 +25,6 @@ stopwords = set(stopwords.words('english'))
 punctuation = set(punctuation)
 whitespace = set(whitespace)
 
-JOB_CATEGORY_GROUPS = {'science & technology': ['Information & Communication Technology', 'Science & Technology'],
-                        'engineering': ['Engineering', 'Construction', 'Mining, Resources & Energy'],
-                        'trade': ['Trade & Services', 'Construction', 'Mining, Resources & Energy'],
-                        'office': ['Administration & Office Support', 'Accounting', 'Sales', 'Marketing & Communications', 
-                                'Consulting and Strategy', 'Human Resources & Recruitment', 'CEO & General Management'],
-                        'health': ['Healthcare & Medical'],
-                        'finance': ['Banking & Financial Services', 'Accounting', 'Insurance & Superannuation'],
-                        'creative': ['Advertising, Arts & Media', 'Design & Architecture'],
-                        'community': ['Community Services & Development', 'Education & Training', 'Sport & Recreation'],
-                        'retail': ['Retail & Consumer Products', 'Sales', 'Hospitality & Tourism', 'Call Centre & Customer Service'],
-                        'legal': ['Legal'],
-                        'civil': ['Government & Defense'],
-                        'animals': ['Farming, Animals & Conservation']}
-
 
 # To do: allow for multiple categories to be evaluated, choosing the best score between multiple tfidf matrices
 def find_closest_jobs(user_input, job_categories,  city=None, company_name=None, job_type=None, score_thresh=0.05):
