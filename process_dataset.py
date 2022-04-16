@@ -111,7 +111,7 @@ def find_closest_columns(nlp, jobs, locations=[], companies=[], job_type=''):
     return out_data
         
     
-def preprocess(csv_name):
+def preprocess(csv_name, file_name):
     df = pd.read_csv(csv_name).drop_duplicates(subset='job_description')
     df = df[df['job_description'].notnull()]
     preprocessed_data = {}
@@ -121,7 +121,7 @@ def preprocess(csv_name):
         job_listings = job_listings[job_listings['category'] == category]
         print(f'=========> {i / len(categories) * 100:.2f} / 100 %', end='\r')
         preprocessed_data[category] = preprocess_descriptions(df, category)
-    pickle.dump(preprocessed_data, open('preprocessed_category_data.pkl', 'wb'))  
+    pickle.dump(preprocessed_data, open(file_name, 'wb'))  
 
 
 def preprocess_descriptions(job_listings, verbose=False):
@@ -273,10 +273,10 @@ def test():
         best_description = jobs_dataframe['job_description'].loc[d]
         print(summarize_description(best_description, bigrams, dictionary, tfidf))
 
-
-if os.path.exists('preprocessed_category_data.pkl'):
+pickle_file_name = 'preprocessed_category_data.pkl'
+if os.path.exists(pickle_file_name):
     jobs_dataframe = pd.read_csv('seek_australia.csv').drop_duplicates(subset='job_description')
     jobs_dataframe = jobs_dataframe[jobs_dataframe['job_description'].notnull()]
     preprocessed_data = pickle.load(open('preprocessed_category_data.pkl', 'rb'))
 else:
-    preprocess(csv_name='seek_australia.csv', file_name='preprocessed_category_data.pkl')
+    preprocess(csv_name='seek_australia.csv', file_name=pickle_file_name)
